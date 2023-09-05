@@ -6,15 +6,34 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+
+	"github.com/MichalTaczala/go_course_building_modern_web_apps/pkg/config"
+	"github.com/MichalTaczala/go_course_building_modern_web_apps/pkg/models"
 )
 
-func RenderTemplate(w http.ResponseWriter, tmpl string) {
+// var functions = template.FuncMap{}
 
-	tc, err := createTemplateCache()
-	if err != nil {
-		log.Fatal(err)
-		return
+var app *config.AppConfig
+
+func NewTemplates(a *config.AppConfig) {
+	app = a
+}
+
+func AddDefaultData(td *models.TemplateData) *models.TemplateData {
+	return td
+}
+
+func RenderTemplate(w http.ResponseWriter, tmpl string, td *models.TemplateData) {
+	var tc map[string]*template.Template
+	if app.UseCache {
+
+		tc = app.TemplateCache
+	} else {
+		tc, _ = CreateTemplateCache()
 	}
+
+	// tc, err := CreateTemplateCache()
+
 	t, ok := tc[tmpl]
 	if !ok {
 		log.Fatal("not found")
@@ -22,7 +41,8 @@ func RenderTemplate(w http.ResponseWriter, tmpl string) {
 	}
 
 	buf := new(bytes.Buffer)
-	err = t.Execute(buf, nil)
+	td = AddDefaultData(td)
+	err := t.Execute(buf, td)
 	if err != nil {
 		log.Println(err)
 	}
@@ -32,16 +52,9 @@ func RenderTemplate(w http.ResponseWriter, tmpl string) {
 		log.Println("render failure")
 		return
 	}
-
-	// parsedTemplate, _ := template.ParseFiles("./templates/"+tmpl, "./templates/base.layout.tmpl")
-	// err = parsedTemplate.Execute(w, nil)
-	// if err != nil {
-	// 	fmt.Println("error")
-	// 	return
-	// }
 }
 
-func createTemplateCache() (map[string]*template.Template, error) {
+func CreateTemplateCache() (map[string]*template.Template, error) {
 	myCashe := make(map[string]*template.Template)
 
 	pages, err := filepath.Glob("./templates/*.page.tmpl")
